@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ironmind</title>
+<meta name="description" content="Seu treino com IA: plano, registro de séries, recuperação, progresso e liga com amigos.">
+<meta name="theme-color" content="#14171c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Ironmind">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/favicon-64.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@600&family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="styles.css?v=ff9c7e60">
+</head>
+<body>
+<div class="auth" id="auth" hidden>
+  <div class="auth-card">
+    <svg class="auth-logo" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="authg" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#ff4d2e"/><stop offset="1" stop-color="#ffa62b"/></linearGradient></defs><path d="M32 6 54.5 19v26L32 58 9.5 45V19z" fill="none" stroke="url(#authg)" stroke-width="5" stroke-linejoin="round"/><path d="M22 40 32 24l10 16z" fill="none" stroke="url(#authg)" stroke-width="3.5" stroke-linejoin="round"/><circle cx="32" cy="24" r="4.5" fill="url(#authg)"/><circle cx="22" cy="40" r="4.5" fill="url(#authg)"/><circle cx="42" cy="40" r="4.5" fill="url(#authg)"/></svg>
+    <h1>ironmind</h1>
+    <p class="note">Entre com seu e-mail. Mandamos um link de acesso, sem senha.</p>
+    <form id="auth-form">
+      <label>Seu nome<input id="auth-name" autocomplete="name" placeholder="Como aparece na Liga" maxlength="40"></label>
+      <label>E-mail<input id="auth-email" type="email" autocomplete="email" required placeholder="voce@email.com"></label>
+      <button class="btn primary" id="auth-send">Receber link de acesso</button>
+    </form>
+    <p class="auth-msg" id="auth-msg" aria-live="polite"></p>
+  </div>
+</div>
+<div id="app" hidden>
+<div class="wrap">
+  <header>
+    <h1><svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="imgrad" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#ff4d2e"/><stop offset="1" stop-color="#ffa62b"/></linearGradient></defs><path d="M32 6 54.5 19v26L32 58 9.5 45V19z" fill="none" stroke="url(#imgrad)" stroke-width="5" stroke-linejoin="round"/><path d="M22 40 32 24l10 16z" fill="none" stroke="url(#imgrad)" stroke-width="3.5" stroke-linejoin="round"/><circle cx="32" cy="24" r="4.5" fill="url(#imgrad)"/><circle cx="22" cy="40" r="4.5" fill="url(#imgrad)"/><circle cx="42" cy="40" r="4.5" fill="url(#imgrad)"/></svg>ironmind</h1>
+    <div class="row"><span class="status" id="sync">Carregando…</span><button class="btn sm" id="open-profile">Perfil</button></div>
+  </header>
+
+  <!-- INÍCIO -->
+  <section class="panel" id="p-inicio">
+    <div class="today" id="today" aria-label="Resumo de hoje"></div>
+    <div class="card" id="d30-card"></div>
+    <div class="card active">
+      <div><div class="k">Plano ativo</div><h3 id="h-plan">Seu plano</h3></div>
+      <button class="btn sm" id="h-plans">Planos</button>
+    </div>
+    <div class="swap-warn" id="swap-warn" hidden></div>
+    <div class="row between"><h3>Seu próximo treino</h3><span class="note" id="h-when"></span></div>
+    <div class="chips" id="h-days"></div>
+    <div class="card">
+      <div class="row between"><h2 id="h-day">Treino</h2><span class="note" id="h-focus"></span></div>
+      <div class="block" id="h-warm" hidden></div>
+      <div class="exlist" id="h-list"></div>
+      <div class="block" id="h-fin" hidden></div>
+    </div>
+    <div class="card" id="wt-card">
+      <div class="row between"><h3>Água de hoje</h3><button class="mini" id="wt-cfg-btn" aria-expanded="false">Meta e lembretes</button></div>
+      <div class="wt-top"><div class="wt-num"><b id="wt-ml">0 ml</b><span class="note" id="wt-goal"></span></div><div class="wt-cups" id="wt-cups" aria-hidden="true"></div></div>
+      <div class="ach-bar"><i id="wt-bar" style="width:0%"></i></div>
+      <div class="row" style="gap:8px"><button class="btn sm primary" data-wt="200">+ Copo 200 ml</button><button class="btn sm" data-wt="500">+ Garrafa 500 ml</button><button class="btn sm" id="wt-undo">Desfazer</button></div>
+      <div class="ch-form" id="wt-cfg" hidden>
+        <label for="wt-meta">Meta diária (ml)<input id="wt-meta" inputmode="numeric" placeholder="automática"></label>
+        <p class="note" style="margin:0" id="wt-auto"></p>
+        <div class="row" style="gap:8px"><label for="wt-from" style="flex-direction:row;align-items:center;gap:6px">Das<input type="time" id="wt-from" value="08:00"></label><label for="wt-to" style="flex-direction:row;align-items:center;gap:6px">às<input type="time" id="wt-to" value="20:00"></label></div>
+        <label for="wt-every">Lembrar a cada<select id="wt-every"><option value="60">1 hora</option><option value="90">1 h 30 min</option><option value="120" selected>2 horas</option><option value="180">3 horas</option></select></label>
+        <div class="row" style="gap:8px"><button class="btn sm" id="wt-save">Salvar meta</button><button class="btn sm primary" id="wt-ics">Baixar lembretes de água</button></div>
+        <p class="note" style="margin:0">Os lembretes vão para o calendário do celular, que avisa nos horários escolhidos todos os dias.</p>
+      </div>
+    </div>
+    <div class="startbar"><button class="btn primary" id="h-start">Iniciar treino</button></div>
+  </section>
+
+  <!-- ROTINAS -->
+  <section class="panel" id="p-rotinas" hidden>
+    <div class="card">
+      <div class="row between"><h2>Seus planos</h2><button class="btn sm primary" id="new-plan">Novo plano</button></div>
+      <div class="plans" id="plans"></div>
+    </div>
+    <div class="card">
+      <div class="row between"><h2 id="r-name">Plano</h2><span class="tag" id="r-src"></span></div>
+      <div class="chips" id="r-days"></div>
+      <div class="row between"><h3 id="r-day"></h3><button class="link" id="r-add">+ Adicionar exercício</button></div>
+      <div class="exlist" id="r-list"></div>
+      <p class="note" id="r-notes"></p>
+    </div>
+    <div class="card" id="pg-card">
+      <h2>Programas prontos</h2>
+      <p class="note" style="margin:0">Programas clássicos montados com os exercícios do app. Toque em um para ver os treinos e comece com um toque. Seus planos atuais continuam salvos.</p>
+      <div class="pg-list" id="pg-list"></div>
+    </div>
+  </section>
+
+  <!-- EXERCÍCIOS -->
+  <section class="panel" id="p-exercicios" hidden>
+    <div class="card">
+      <h2>Exercícios</h2>
+      <input id="l-q" placeholder="Buscar exercício" aria-label="Buscar exercício">
+      <div class="chips" id="l-musc"></div>
+      <div class="row between">
+        <label style="flex-direction:row;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:14px;color:var(--fg)"><input type="checkbox" id="l-mine" checked> Só com meu equipamento</label>
+        <label for="l-day" style="flex-direction:row;align-items:center;gap:8px">Adicionar em<select id="l-day"></select></label>
+      </div>
+    </div>
+    <div class="card"><div class="exlist" id="l-list"></div></div>
+    <div class="card" id="cx-card">
+      <div class="row between"><h3>Meus exercícios</h3><button class="btn sm primary" id="cx-new" aria-expanded="false">+ Criar exercício</button></div>
+      <div class="ch-form" id="cx-form" hidden>
+        <label for="cx-nome">Nome<input id="cx-nome" maxlength="50" placeholder="Ex.: Remada no aparelho X"></label>
+        <div class="row" style="gap:8px"><label for="cx-musc">Músculo principal<select id="cx-musc"></select></label><label for="cx-equip">Equipamento<select id="cx-equip"></select></label></div>
+        <label for="cx-nivel">Dificuldade<select id="cx-nivel"><option value="1">1 · muito fácil</option><option value="2" selected>2 · fácil</option><option value="3">3 · médio</option><option value="4">4 · difícil</option><option value="5">5 · avançado</option></select></label>
+        <label for="cx-dica">Dica de execução (opcional)<textarea id="cx-dica" maxlength="200" rows="2" placeholder="Ex.: banco na posição 3, pegada aberta"></textarea></label>
+        <div class="row" style="gap:8px;align-items:center"><label class="btn sm" for="cx-foto" style="font-size:15px;color:var(--fg)">Adicionar foto</label><input type="file" id="cx-foto" accept="image/*" hidden><img id="cx-prev" alt="Prévia da foto" hidden class="cx-img"></div>
+        <button class="btn sm primary" id="cx-save">Salvar exercício</button>
+      </div>
+      <div class="exlist" id="cx-list"></div>
+    </div>
+  </section>
+
+  <!-- RECUPERAÇÃO -->
+  <section class="panel" id="p-recuperacao" hidden>
+    <div class="card">
+      <h2>Recuperação muscular</h2>
+      <p class="sub">Calculada pelas séries que você fez nos últimos dias. Cada músculo leva cerca de 48 a 72 horas para se recuperar de um treino pesado.</p>
+      <div class="bodies" id="bodies"></div>
+      <div class="legend"><span><i style="background:var(--ok)"></i>Pronto (85%+)</span><span><i style="background:var(--warn)"></i>Recuperando (50-84%)</span><span><i style="background:var(--bad)"></i>Cansado (abaixo de 50%)</span></div>
+    </div>
+    <div class="card"><div id="mlist"></div></div>
+  </section>
+
+  <!-- PROGRESSO -->
+  <section class="panel" id="p-progresso" hidden>
+    <div class="prsec" id="prsec" role="tablist" aria-label="Seções do progresso">
+      <button role="tab" data-ps="resumo" aria-selected="true">Resumo</button><button role="tab" data-ps="evolucao" aria-selected="false">Evolução</button><button role="tab" data-ps="corpo" aria-selected="false">Corpo</button><button role="tab" data-ps="amigos" aria-selected="false">Amigos</button>
+    </div>
+    <div class="card">
+      <div class="row between"><h3>Perfil</h3><button class="btn sm primary" id="pr-settings">Configurações</button></div>
+      <div class="who-name" id="pr-name">Seu nome</div>
+      <div class="facts">
+        <div><span class="fv" id="pr-goal">—</span><span class="fk">Meta</span></div>
+        <div><span class="fv" id="pr-weight">—</span><span class="fk">Peso</span></div>
+        <div><span class="fv" id="pr-freq">—</span><span class="fk">Frequência</span></div>
+      </div>
+    </div>
+
+    <div class="coach">
+      <div class="row between"><span class="who">Resumo da semana</span><button class="mini" id="pr-coach-ai" data-ai hidden>Escrever com IA</button></div>
+      <div class="ringrow">
+        <div class="ring" id="pr-ring"></div>
+        <div><b id="pr-ring-t">Treinos na semana</b><div class="note" id="pr-ring-s"></div></div>
+      </div>
+      <div class="ans" id="pr-coach"></div>
+    </div>
+
+    <div class="card" id="cmp-card">
+      <h3>Comparar com amigo</h3>
+      <label for="cmp-who">Amigo da liga<select id="cmp-who"></select></label>
+      <div id="cmp-out"></div>
+    </div>
+
+    <div class="card" id="liga-card">
+      <div class="row between"><h3>Liga Ironmind</h3><label style="flex-direction:row;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:14px;color:var(--fg)"><input type="checkbox" id="lg-join"> Participar</label></div>
+      <div class="chips scrollx" id="lg-metric">
+        <button class="chip" data-m="treinosSemana" aria-pressed="true">Treinos na semana</button>
+        <button class="chip" data-m="volumeSemana" aria-pressed="false">Volume na semana</button>
+        <button class="chip" data-m="sequencia" aria-pressed="false">Sequência</button>
+        <button class="chip" data-m="recordesMes" aria-pressed="false">Recordes no mês</button>
+        <button class="chip" data-m="exercicio" aria-pressed="false">Por exercício</button>
+        <button class="chip" data-m="musculo" aria-pressed="false">Por músculo</button>
+        <button class="chip" data-m="evolucao" aria-pressed="false">Evolução em 30 dias</button>
+        <button class="chip" data-m="xp" aria-pressed="false">Nível (XP)</button>
+      </div>
+      <label for="lg-div">Divisão por idade<select id="lg-div"><option value="">Todas as idades</option></select></label>
+      <label for="lg-sub" id="lg-sub-l" hidden><span id="lg-sub-t">Exercício</span><select id="lg-sub"></select></label>
+      <div class="lg-list" id="lg-list"></div>
+      <p class="note" id="lg-note"></p>
+    </div>
+
+    <div class="card" id="cl-card">
+      <h3>Clube da academia</h3>
+      <div id="cl-body"></div>
+    </div>
+
+    <div class="card" id="ch-card">
+      <div class="row between"><h3>Desafios</h3><button class="mini" id="ch-new" aria-expanded="false">+ Criar desafio</button></div>
+      <div class="ch-form" id="ch-form" hidden>
+        <label for="ch-met">Quem faz mais<select id="ch-met"><option value="treinos">Treinos</option><option value="volume">Volume (carga × repetições)</option><option value="series">Séries</option><option value="minutos">Minutos treinando</option><option value="recordes">Recordes pessoais</option></select></label>
+        <label for="ch-dur">Duração<select id="ch-dur"><option value="7">7 dias</option><option value="14">14 dias</option><option value="30">30 dias</option><option value="mes" selected>Até o fim do mês</option></select></label>
+        <label for="ch-title">Nome (opcional)<input id="ch-title" maxlength="60" placeholder="Ex.: Desafio de novembro"></label>
+        <button class="btn sm primary" id="ch-create">Criar e participar</button>
+      </div>
+      <div class="ch-list" id="ch-list"></div>
+    </div>
+
+    <div class="card" id="fd-card">
+      <div class="row between"><h3>Feed dos amigos</h3><label style="flex-direction:row;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:14px;color:var(--fg)"><input type="checkbox" id="fd-share"> Mostrar meus treinos</label></div>
+      <p class="note" style="margin:0" id="fd-note">Veja e curta os treinos, recordes e conquistas de quem está na liga. Seus treinos só aparecem aqui se você marcar “Mostrar meus treinos”.</p>
+      <div class="fd-list" id="fd-list"></div>
+    </div>
+
+    <div class="card">
+      <div class="row between"><h3>Calendário de treinos</h3><span class="streak" id="pr-streak"></span></div>
+      <div class="week" id="pr-week"></div>
+      <div class="selbar" id="pr-sel" hidden></div>
+      <p class="note" id="pr-hint">Toque num dia (ou na Meta, para a semana inteira) para ver os treinos e relatórios dele.</p>
+      <div class="row between"><button class="link" id="wk-prev">‹ Semana anterior</button><span class="note" id="wk-label"></span><button class="link" id="wk-next">Próxima ›</button></div>
+    </div>
+
+    <div class="card">
+      <div class="row between"><h3>Treinos concluídos</h3><button class="btn sm" id="pr-more">Ver todos</button></div>
+      <div id="pr-done"></div>
+    </div>
+
+    <div class="card">
+      <div class="row between"><h3>Medidas</h3><button class="btn sm" id="m-add-toggle">+ Registrar</button></div>
+      <div class="m-sum" id="m-sum"></div>
+      <div class="chips scrollx" id="m-kinds"></div>
+      <div class="madd" id="m-add" hidden>
+        <label for="m-val">Valor<input id="m-val" type="number" inputmode="decimal" step="0.1"></label>
+        <label for="m-date">Data<input id="m-date" type="date"></label>
+        <button class="btn primary sm" id="m-save">Salvar</button>
+      </div>
+      <div class="chartbox" id="m-chart"></div>
+      <div class="hist" id="m-list"></div>
+    </div>
+
+    <div class="card" id="hl-card">
+      <div class="row between"><h3>Saúde: peso, passos e sono</h3><span class="tag" id="hl-tag"></span></div>
+      <p class="note" style="margin:0">Importe os dados do Apple Saúde ou do Google Fit. O peso entra em Medidas e os passos e o sono aparecem aqui.</p>
+      <div class="row" style="gap:8px"><label class="btn sm primary" for="hl-file" style="font-size:15px;color:var(--accent-ink)">Importar arquivo</label><input type="file" id="hl-file" accept=".zip,.xml,.csv,application/zip,text/xml,text/csv" hidden><button class="mini" id="hl-how-btn" aria-expanded="false">Como exportar</button></div>
+      <div class="block" id="hl-how" hidden><b>iPhone (Apple Saúde)</b><ol class="how-steps"><li>Abra o app Saúde e toque na sua foto no canto superior direito.</li><li>Toque em “Exportar Todos os Dados de Saúde” e espere o arquivo ficar pronto.</li><li>Salve em Arquivos e importe aqui o <b>exportar.zip</b> (ou export.zip).</li></ol>
+        <b>Android (Google Fit)</b><ol class="how-steps"><li>Acesse takeout.google.com, desmarque tudo e marque só “Fit”.</li><li>Baixe o arquivo e importe aqui o .zip, ou só o arquivo “Daily activity metrics.csv”.</li></ol>
+        <b>Outros apps</b><p class="note" style="margin:0">Uma planilha CSV com colunas data, peso, passos e sono (em horas) também funciona.</p></div>
+      <p class="note" id="hl-note" style="margin:0"></p>
+      <div id="hl-out"></div>
+    </div>
+
+    <div class="card" id="mw-card">
+      <div class="row between"><h3>Músculos da semana</h3><span class="tag" id="mw-tag"></span></div>
+      <p class="note" style="margin:0" id="mw-sub"></p>
+      <div class="mw-maps" id="mw-maps"></div>
+      <div class="mw-leg"><span><i style="background:var(--mus)"></i>Esquecido</span><span><i style="background:#f4a582"></i>Pouco</span><span><i style="background:var(--accent)"></i>Ideal</span><span><i style="background:#9b1c2c"></i>Demais</span></div>
+      <div class="mw-list" id="mw-list"></div>
+      <button class="mini" id="mw-ai" data-ai hidden>Análise do coach IA</button><div class="ans" id="mw-ai-out"></div>
+    </div>
+
+    <div class="card">
+      <div class="row between"><h3>Relatórios</h3>
+        <div class="chips" id="rp-range"><button class="chip" data-r="7">7 dias</button><button class="chip" data-r="30" aria-pressed="true">30 dias</button><button class="chip" data-r="0">Tudo</button></div></div>
+      <div class="stats">
+        <div class="stat"><div class="v" id="s-week">0</div><div class="k">Treinos no período</div></div>
+        <div class="stat"><div class="v" id="s-total">0</div><div class="k">Séries no período</div></div>
+        <div class="stat"><div class="v" id="s-vol">0</div><div class="k">Volume (t)</div></div>
+      </div>
+      <div class="note" id="rp-sel">Séries por grupo muscular</div>
+      <div class="chartbox" id="rp-bars"></div>
+    </div>
+
+    <div class="card">
+      <div class="row between"><h3>Recordes e força (1RM)</h3><span class="tag" id="pr-count"></span></div>
+      <p class="note" style="margin:0">1RM estimado: quanto você levantaria em uma única repetição, calculado pelas suas séries (fórmula de Epley). A seta compara com 30 dias atrás.</p>
+      <div class="rm-list" id="rm-list"></div>
+    </div>
+
+    <div class="card" id="rt-card">
+      <div class="row between"><h3 id="rt-title">Retrospectiva</h3><span class="tag" id="xp-lvl"></span></div>
+      <div class="xp" id="xp-box"></div>
+      <button class="btn sm primary" id="rt-open">Ver minha retrospectiva do ano</button>
+    </div>
+    <div class="card" id="ach-card">
+      <div class="row between"><h3>Conquistas</h3><span class="tag" id="ach-count"></span></div>
+      <div class="ach-list" id="ach-list"></div>
+    </div>
+
+    <div class="card" id="gl-card">
+      <div class="row between"><h3>Metas e previsões</h3><button class="mini" id="gl-new" aria-expanded="false">+ Nova meta</button></div>
+      <div class="ch-form" id="gl-form" hidden>
+        <label for="gl-type">Tipo<select id="gl-type"><option value="treinos">Treinos no mês</option><option value="volume">Volume no mês (kg)</option><option value="carga">Carga num exercício</option><option value="peso">Peso corporal</option></select></label>
+        <label for="gl-ex" id="gl-ex-l">Exercício<select id="gl-ex"></select></label>
+        <label for="gl-alvo"><span id="gl-alvo-t">Meta</span><input id="gl-alvo" inputmode="decimal" placeholder="Ex.: 100"></label>
+        <button class="btn sm primary" id="gl-add">Adicionar meta</button>
+      </div>
+      <div class="gl-list" id="gl-list"></div>
+    </div>
+
+    <div class="card">
+      <h3>Evolução por exercício</h3>
+      <label for="g-ex">Exercício<select id="g-ex"></select></label>
+      <div class="chartbox" id="chart"></div>
+      <p class="note">Linha: maior carga do dia (kg). Pontilhado: 1RM estimado (fórmula de Epley).</p>
+      <h3 style="margin-top:4px">Histórico completo</h3>
+      <div class="hx-list" id="hx-list"></div>
+    </div>
+    <div class="card" data-ai hidden>
+      <div class="row between"><h3>Análise da IA</h3><button class="btn sm" id="ai-review">Analisar meu progresso</button></div>
+      <div id="ai-out" class="note" style="white-space:pre-wrap">A IA lê seus treinos salvos e sugere ajustes de carga e volume.</div>
+    </div>
+
+    <div class="card">
+      <button class="glos-top" id="g-toggle" aria-expanded="false"><span class="gico">Aa</span><span><b>Glossário da academia</b><br><span class="note">Todo termo de treino explicado de um jeito simples.</span></span></button>
+      <div id="g-body" hidden>
+        <input id="g-q" placeholder="Buscar termo. Ex.: drop-set" aria-label="Buscar termo">
+        <dl class="gloss" id="g-list"></dl>
+      </div>
+    </div>
+  </section>
+
+  <!-- TREINO EM ANDAMENTO -->
+  <section class="player" id="p-treino" hidden>
+    <div class="pl-top">
+      <button class="pl-ico" id="pl-exit" aria-label="Sair do treino"><svg viewBox="0 0 24 24"><path d="M5 5l14 14M19 5 5 19"/></svg></button>
+      <span class="pl-time"><span class="pl-tl">Tempo: </span><b id="pl-time">00:00</b></span>
+      <span style="flex:1"></span>
+      <button class="pl-ico" id="pl-focus" aria-pressed="false" aria-label="Modo foco"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/><circle cx="12" cy="12" r="2.5" class="fillme"/></svg></button>
+      <button class="pl-ico" id="pl-voice" aria-pressed="false" aria-label="Treino por voz"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path id="pl-voice-waves" d="M17 6.5a4 4 0 0 1 0 5M19.5 4a8 8 0 0 1 0 10"/></svg></button>
+      <button class="pl-ico" id="pl-sound" aria-pressed="true" aria-label="Som do descanso"><svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9z" class="fillme"/><path id="pl-sound-waves" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/></svg></button>
+      <button class="pl-done" id="pl-finish">Concluir</button>
+    </div>
+    <div class="pl-stage">
+      <div class="pl-tools">
+        <button class="pl-ico sm" id="pl-tip" aria-label="Dica de execução" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg></button>
+        <button class="pl-ico sm" id="pl-howto" aria-label="Como fazer"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg></button>
+        <button class="pl-ico sm" id="pl-cad" aria-pressed="false" aria-label="Timer de cadência"><svg viewBox="0 0 24 24"><path d="M9 3h6l3 18H6z"/><path d="M12 17 16 6"/></svg></button>
+      </div>
+      <div class="pl-fig" id="pl-fig"></div>
+      <div class="cad-ov" id="cad-ov" hidden aria-live="polite"><b id="cad-ph">Desce</b><span id="cad-n"></span><small id="cad-rep"></small></div>
+      <div class="pl-thumbs" id="pl-thumbs"></div>
+      <div class="pl-tipbox" id="pl-tipbox" hidden></div>
+      <div class="pl-rest" id="pl-rest" hidden>
+        <span class="lbl2">Descanso</span>
+        <span class="pl-clock" id="pl-clock">1:00</span>
+        <div class="pl-bar"><span id="pl-bar"></span></div>
+        <div class="row" style="justify-content:center"><button class="btn sm" id="pl-minus">−15s</button><button class="btn sm primary" id="pl-skip">Pular</button><button class="btn sm" id="pl-plus">+15s</button></div>
+        <span class="note" id="pl-next"></span>
+      </div>
+      <div class="pl-go" id="pl-go" hidden>VAMOS!</div>
+    </div>
+    <div class="pl-info">
+      <div id="pl-lvl"></div>
+      <div class="row between" style="align-items:flex-start;flex-wrap:nowrap">
+        <div style="min-width:0"><div class="pl-name" id="pl-name">Exercício</div>
+          <button class="link" id="pl-rest-set" aria-label="Mudar tempo de descanso"></button> <button class="link" id="pl-busy-open">Aparelho ocupado?</button></div>
+        <button class="btn sm" id="pl-edit-btn">Editar</button>
+      </div>
+      <div class="block" id="pl-warm" hidden></div>
+    </div>
+    <div class="pl-table">
+      <p class="note" id="pl-hint" style="margin:0;padding:0 16px 6px">Toque na linha para registrar a série, no ✓ para desfazer e arraste para o lado para remover.</p>
+      <div class="pl-last" id="pl-last" aria-live="polite" hidden></div>
+      <div class="pl-head"><span>Série</span><span>Anterior</span><span>Reps</span><span>Kg</span></div>
+      <div id="pl-rows"></div>
+      <div class="pl-note"><label for="pl-ex-note">Nota deste exercício<textarea id="pl-ex-note" rows="2" maxlength="300" placeholder="Ex.: senti o ombro, melhorar a descida, banco na posição 4"></textarea></label><span class="note" id="pl-ex-last" style="margin:0"></span></div>
+      <div class="row" id="pl-setbtns" style="justify-content:center;padding:12px 0"><button class="btn sm" id="pl-addset">+ Adicionar série</button><button class="btn sm" id="pl-delset">− Remover série</button></div>
+    </div>
+    <div class="pl-bottom"><button class="btn primary" id="pl-main">Registrar série</button></div>
+  </section>
+
+  <!-- PERFIL -->
+  <section class="panel" id="p-perfil" hidden>
+    <div class="card">
+      <div class="row between"><h2>Seu perfil</h2><button class="btn sm" id="close-profile">Voltar</button></div>
+      <p class="sub">Cada plano novo é montado com base nisso. Os planos antigos continuam salvos em “Rotinas”.</p>
+      <div class="field"><span class="flabel">Objetivos <small>(escolha um ou mais; o primeiro é o principal)</small></span>
+        <div class="chips" id="f-goals" data-multi="goals"></div></div>
+      <div class="field"><span class="flabel">Equipamento disponível <small>(marque tudo que você tem)</small></span>
+        <div class="chips" id="f-equip" data-multi="equip"></div></div>
+      <label for="f-name">Seu nome<input id="f-name" placeholder="Ex.: Júnior"></label>
+      <div class="grid2">
+        <label for="f-level">Experiência<select id="f-level">
+          <option value="iniciante">Iniciante (menos de 6 meses)</option>
+          <option value="intermediario">Intermediário (6 meses a 2 anos)</option>
+          <option value="avancado">Avançado (mais de 2 anos)</option>
+        </select></label>
+        <label for="f-days">Dias por semana<select id="f-days">
+          <option>2</option><option selected>3</option><option>4</option><option>5</option><option>6</option>
+        </select></label>
+        <label for="f-min">Minutos por treino<select id="f-min">
+          <option>30</option><option selected>45</option><option>60</option><option>75</option><option>90</option>
+        </select></label>
+        <label for="f-weight">Peso corporal (kg)<input id="f-weight" type="number" inputmode="decimal" placeholder="Ex.: 78"></label>
+        <label for="f-height">Altura (cm)<input id="f-height" type="number" inputmode="numeric" placeholder="Ex.: 175"></label>
+        <label for="f-age">Idade<input id="f-age" type="number" inputmode="numeric" placeholder="Ex.: 30"></label>
+        <label for="f-sex">Sexo<select id="f-sex"><option value="">Prefiro não dizer</option><option value="masculino">Masculino</option><option value="feminino">Feminino</option></select></label>
+      </div>
+      <label for="f-sport">Esporte que pratica (opcional)<input id="f-sport" placeholder="Ex.: futebol, corrida 10 km, jiu-jitsu"></label>
+      <label for="f-limits">Lesões ou limitações<input id="f-limits" placeholder="Ex.: dor no joelho direito"></label>
+      <label for="f-pref" data-ai hidden>Preferências<input id="f-pref" placeholder="Ex.: gosto de supino, quero focar em glúteos"></label>
+      <div class="row">
+        <button class="btn primary" id="gen" data-ai hidden>Gerar plano com IA</button>
+        <button class="btn primary" id="gen-basic">Gerar plano</button>
+        <button class="btn" id="save-profile">Só salvar perfil</button>
+      </div>
+      <p class="note" id="gen-note" data-ai hidden>“Gerar plano com IA” usa o Claude. “Rápido” monta um plano padrão na hora, sem IA.</p>
+      <div class="thinking" id="gen-stream" hidden></div>
+    </div>
+    <div class="card" id="cfg-card">
+      <h3>Configurações de treino</h3>
+      <p class="note" style="margin:0">Valem para os próximos treinos. Durante o treino você ainda pode mudar o descanso de cada exercício.</p>
+      <label for="cfg-rest">Descanso entre séries<select id="cfg-rest"><option value="plano">Usar o do plano</option><option value="30">30 s</option><option value="45">45 s</option><option value="60">1 min</option><option value="90">1 min 30 s</option><option value="120">2 min</option><option value="150">2 min 30 s</option><option value="180">3 min</option><option value="240">4 min</option></select></label>
+      <label for="cfg-extra">Descanso extra ao trocar de exercício<select id="cfg-extra"><option value="0">Nenhum</option><option value="30">+30 s</option><option value="60">+1 min</option><option value="90">+1 min 30 s</option></select></label>
+      <label for="cfg-cad">Cadência das repetições (descida, pausa, subida)<select id="cfg-cad"><option value="2-0-1">2-0-1 (normal)</option><option value="2-1-1">2-1-1</option><option value="3-0-1">3-0-1 (hipertrofia)</option><option value="3-1-1">3-1-1</option><option value="4-0-1">4-0-1 (descida lenta)</option><option value="4-1-2">4-1-2</option><option value="5-0-1">5-0-1</option></select></label>
+      <label for="cfg-inc">Aumento de carga sugerido<select id="cfg-inc"><option value="auto">Automático (1 kg leve, 2,5 kg pesado)</option><option value="1">1 kg</option><option value="2.5">2,5 kg</option><option value="5">5 kg</option></select></label>
+      <div class="cfg-toggles">
+        <label style="flex-direction:row;align-items:center;justify-content:space-between;gap:12px;text-transform:none;letter-spacing:0;font-size:15px;font-weight:500;color:var(--fg)">Iniciar descanso ao registrar série<input type="checkbox" id="cfg-auto"></label>
+        <label style="flex-direction:row;align-items:center;justify-content:space-between;gap:12px;text-transform:none;letter-spacing:0;font-size:15px;font-weight:500;color:var(--fg)">Som no descanso<input type="checkbox" id="cfg-sound"></label>
+        <label style="flex-direction:row;align-items:center;justify-content:space-between;gap:12px;text-transform:none;letter-spacing:0;font-size:15px;font-weight:500;color:var(--fg)">Treino por voz<input type="checkbox" id="cfg-voice"></label>
+        <label style="flex-direction:row;align-items:center;justify-content:space-between;gap:12px;text-transform:none;letter-spacing:0;font-size:15px;font-weight:500;color:var(--fg)">Vibrar no fim do descanso<input type="checkbox" id="cfg-vib"></label>
+        <label style="flex-direction:row;align-items:center;justify-content:space-between;gap:12px;text-transform:none;letter-spacing:0;font-size:15px;font-weight:500;color:var(--fg)">Manter a tela ligada no treino<input type="checkbox" id="cfg-awake"></label>
+      </div>
+    </div>
+    <div class="card" id="cy-card">
+      <h3>Ciclo menstrual</h3>
+      <p class="note" style="margin:0">Opcional. O app identifica a fase do ciclo e ajusta a carga sugerida e o volume. Esses dados ficam só na sua conta e nunca vão para a liga ou o feed.</p>
+      <label style="flex-direction:row;align-items:center;justify-content:space-between;gap:12px;text-transform:none;letter-spacing:0;font-size:15px;font-weight:500;color:var(--fg)">Ajustar o treino pelo ciclo<input type="checkbox" id="cy-on"></label>
+      <div id="cy-fields" class="ch-form" hidden>
+        <label for="cy-start">Primeiro dia da última menstruação<input type="date" id="cy-start"></label>
+        <div class="row" style="gap:8px"><label for="cy-dur">Duração do ciclo (dias)<input id="cy-dur" inputmode="numeric" value="28"></label><label for="cy-mens">Dias de menstruação<input id="cy-mens" inputmode="numeric" value="5"></label></div>
+        <label style="flex-direction:row;align-items:center;justify-content:space-between;gap:12px;text-transform:none;letter-spacing:0;font-size:15px;font-weight:500;color:var(--fg)">Reduzir uma série na menstruação<input type="checkbox" id="cy-red" checked></label>
+        <div class="block" id="cy-now"></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Lembretes de treino</h3>
+      <p class="note" style="margin:0">Escolha os dias e o horário. O app gera um arquivo de lembretes para você abrir no calendário do celular (Google Agenda, Calendário do iPhone), que avisa na hora certa toda semana.</p>
+      <div class="chips" id="rem-days"></div>
+      <div class="row"><label for="rem-time" style="flex-direction:row;align-items:center;gap:8px">Horário<input type="time" id="rem-time" value="18:30"></label>
+        <button class="btn sm primary" id="rem-save">Baixar lembretes</button></div>
+    </div>
+    <div class="card">
+      <h3>Backup dos seus dados</h3>
+      <p class="note" style="margin:0">Salve uma cópia do perfil, planos, treinos e medidas num arquivo. Para restaurar, importe o arquivo: os treinos são somados aos que já existem.</p>
+      <div class="row"><button class="btn sm primary" id="bk-export">Exportar backup</button><label class="btn sm" for="bk-file" style="font-size:15px;color:var(--fg)">Importar backup</label><input type="file" id="bk-file" accept=".json,application/json" hidden></div>
+      <p class="note" id="bk-note" style="margin:0"></p>
+    </div>
+    <div class="card">
+      <h3>Instalar o app</h3>
+      <p class="note" style="margin:0">O Ironmind funciona como um aplicativo: ícone na tela inicial, tela cheia e abre mesmo sem internet.</p>
+      <button class="btn primary" data-install hidden onclick="ironmindInstall()">Instalar agora</button>
+      <ol class="how-steps"><li><b>Android (Chrome):</b> toque em ⋮ no canto e escolha “Instalar app” ou “Adicionar à tela inicial”.</li><li><b>iPhone (Safari):</b> toque em Compartilhar e escolha “Adicionar à Tela de Início”.</li></ol>
+      <button class="btn sm" onclick="ironmindSignOut()">Sair da conta</button>
+    </div>
+  </section>
+</div>
+
+<div class="rt" id="rt" hidden role="dialog" aria-modal="true" aria-label="Retrospectiva do ano">
+  <div class="rt-bars" id="rt-bars"></div>
+  <button class="rt-x" id="rt-x" aria-label="Fechar">✕</button>
+  <div class="rt-slide" id="rt-slide"></div>
+  <div class="rt-foot"><button class="btn sm" id="rt-prev">Voltar</button><button class="btn sm primary" id="rt-save" hidden>Baixar imagem</button><button class="btn sm" id="rt-next">Próximo</button></div>
+</div>
+<div class="how" id="pl-busy" hidden role="dialog" aria-modal="true" aria-labelledby="pl-busy-t">
+  <div class="how-back" data-close="pl-busy"></div>
+  <div class="how-sheet">
+    <div class="row between" style="flex-wrap:nowrap"><h2 id="pl-busy-t">Aparelho ocupado</h2><button class="btn sm" data-close="pl-busy">Fechar</button></div>
+    <p class="note" style="margin:0" id="pl-busy-sub"></p>
+    <button class="btn sm primary" id="pl-busy-ai" data-ai hidden>Pedir sugestão ao coach IA</button>
+    <div id="pl-busy-ai-out"></div>
+    <h3>Alternativas para o mesmo músculo</h3>
+    <div class="exlist" id="pl-busy-list"></div>
+  </div>
+</div>
+<div class="how" id="sh-card" hidden role="dialog" aria-modal="true" aria-labelledby="sh-card-t">
+  <div class="how-back" data-close="sh-card"></div>
+  <div class="how-sheet">
+    <div class="row between" style="flex-wrap:nowrap"><h2 id="sh-card-t">Cartão do treino</h2><button class="btn sm" data-close="sh-card">Fechar</button></div>
+    <img id="sh-img" alt="Prévia do cartão do treino" style="width:100%;border-radius:12px;display:block;background:#1a120c;aspect-ratio:4/5">
+    <div class="row" style="gap:8px"><button class="btn sm primary" id="sh-save">Baixar imagem</button><button class="btn sm" id="sh-share" hidden>Compartilhar</button></div>
+    <p class="note" style="margin:0">Baixe a imagem e poste no Instagram, WhatsApp ou onde quiser.</p>
+  </div>
+</div>
+<div class="how" id="pl-edit" hidden role="dialog" aria-modal="true" aria-labelledby="pl-edit-t">
+  <div class="how-back" data-close="pl-edit"></div>
+  <div class="how-sheet">
+    <div class="row between" style="flex-wrap:nowrap"><h2 id="pl-edit-t">Exercícios de hoje</h2><button class="btn sm" data-close="pl-edit">Pronto</button></div>
+    <p class="note" style="margin:0">Reordene, remova ou adicione exercícios só para o treino de hoje.</p>
+    <div class="exlist" id="pl-edit-list"></div>
+    <button class="btn sm" id="pl-save-plan">Salvar esta lista no plano também</button>
+    <h3>Adicionar exercício</h3>
+    <input id="pl-q" placeholder="Buscar. Ex.: supino, agachamento, prancha" aria-label="Buscar exercício para adicionar">
+    <div class="exlist" id="pl-add-list"></div>
+  </div>
+</div>
+<div class="how" id="pl-coach" hidden role="dialog" aria-modal="true" aria-labelledby="pl-coach-t">
+  <div class="how-back" data-close="pl-coach"></div>
+  <div class="how-sheet">
+    <div class="row between" style="flex-wrap:nowrap"><h2 id="pl-coach-t">Coach IA</h2><button class="btn sm" data-close="pl-coach">Fechar</button></div>
+    <p class="note" id="pl-coach-ctx" style="margin:0"></p>
+    <div class="chips" id="pl-coach-quick"></div>
+    <div class="row" style="flex-wrap:nowrap"><input id="pl-coach-q" placeholder="Ou escreva sua pergunta" style="flex:1"><button class="btn sm primary" id="pl-coach-ask">Perguntar</button></div>
+    <div class="ans" id="pl-coach-ans" style="white-space:pre-wrap"></div>
+  </div>
+</div>
+<div class="how" id="pl-end" hidden role="dialog" aria-modal="true" aria-labelledby="pl-end-t">
+  <div class="how-back" data-close="pl-end"></div>
+  <div class="how-sheet">
+    <h2 id="pl-end-t">Concluir treino</h2>
+    <div class="dstats" id="pl-sum"></div>
+    <div class="block" id="pl-fin" hidden></div>
+    <label for="pl-notes">Como foi o treino?<textarea id="pl-notes" placeholder="Ex.: dormi mal, ombro um pouco dolorido"></textarea></label>
+    <button class="btn primary" id="pl-save">Salvar treino</button>
+    <div class="row between"><button class="btn sm" data-close="pl-end">Continuar treinando</button><button class="btn sm danger" id="pl-discard">Descartar treino</button></div>
+  </div>
+</div>
+<div class="how" id="how" hidden role="dialog" aria-modal="true" aria-labelledby="how-title">
+  <div class="how-back" id="how-back"></div>
+  <div class="how-sheet">
+    <div class="row between" style="flex-wrap:nowrap"><h2 id="how-title">Exercício</h2><button class="btn sm" id="how-close">Fechar</button></div>
+    <div id="how-meta" class="row"></div>
+    <div class="how-stage"><div class="how-fig" id="how-fig"></div><div class="how-map" id="how-map"></div></div>
+    <div class="note" id="how-phase" style="text-align:center">Posição inicial</div>
+    <ol class="how-steps" id="how-steps"></ol>
+    <div class="block how-err"><b>Atenção</b><span id="how-err"></span></div>
+    <div class="block" id="how-tip"></div>
+  </div>
+</div>
+<nav><div class="tabs" role="tablist">
+  <button role="tab" data-tab="inicio" aria-selected="true">Início</button>
+  <button role="tab" data-tab="rotinas" aria-selected="false">Rotinas</button>
+  <button role="tab" data-tab="exercicios" aria-selected="false">Exercícios</button>
+  <button role="tab" data-tab="recuperacao" aria-selected="false">Recuperação</button>
+  <button role="tab" data-tab="progresso" aria-selected="false">Progresso</button>
+</div></nav>
+<button class="coach-fab" id="coach-fab" data-ai aria-label="Perguntar ao coach IA" hidden><svg viewBox="0 0 24 24"><path d="M12 3l1.8 4.7L18.5 9l-4.7 1.8L12 15.5l-1.8-4.7L5.5 9l4.7-1.3zM18 15l.9 2.1L21 18l-2.1.9L18 21l-.9-2.1L15 18l2.1-.9z"/></svg></button>
+<div class="toast" id="toast" hidden></div>
+</div>
+<script src="lib/supabase.js"></script>
+<script src="config.js?v=ff9c7e60"></script>
+<script src="shim.js?v=ff9c7e60"></script>
+</body>
+</html>
