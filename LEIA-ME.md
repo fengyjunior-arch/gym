@@ -30,8 +30,8 @@ Você precisa de duas contas grátis, Supabase e Netlify, e não tem nenhum cust
 
 No Supabase, abra **Authentication > URL Configuration**:
 
-- **Site URL**: o endereço da Netlify
-- **Redirect URLs**: o mesmo endereço
+- **Site URL**: o endereço da Netlify completo, começando com `https://` e sem barra no fim (ex.: `https://ironmind-junior.netlify.app`)
+- **Redirect URLs**: o mesmo endereço com `/**` no fim (ex.: `https://ironmind-junior.netlify.app/**`)
 
 Sem isso, o link do e-mail não volta para o app.
 
