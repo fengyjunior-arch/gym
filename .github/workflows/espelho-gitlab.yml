@@ -1,0 +1,31 @@
+# Copia automática do código para o GitLab.
+# Toda vez que algo muda aqui no GitHub, esta rotina envia a mesma versão para o GitLab.
+# Precisa de dois "segredos" no GitHub (Settings > Secrets and variables > Actions):
+#   GITLAB_TOKEN   = token de acesso pessoal do GitLab (permissão write_repository)
+#   GITLAB_PROJETO = caminho do projeto no GitLab, por exemplo: seu-usuario/gym
+name: Espelho no GitLab
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  copiar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar o código do GitHub
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Enviar para o GitLab
+        env:
+          GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
+          GITLAB_PROJETO: ${{ secrets.GITLAB_PROJETO }}
+        run: |
+          if [ -z "$GITLAB_TOKEN" ] || [ -z "$GITLAB_PROJETO" ]; then
+            echo "Segredos GITLAB_TOKEN e GITLAB_PROJETO ainda não configurados. Nada a fazer."
+            exit 0
+          fi
+          git push --force "https://oauth2:${GITLAB_TOKEN}@gitlab.com/${GITLAB_PROJETO}.git" "HEAD:refs/heads/${GITHUB_REF_NAME}"
+          git push --force --tags "https://oauth2:${GITLAB_TOKEN}@gitlab.com/${GITLAB_PROJETO}.git" || true
