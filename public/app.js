@@ -392,29 +392,15 @@ function openHow(name){
   const info = infoOf(ex), key = patternOf(ex), steps = HOW[key] || HOW.squat, tip = ex.dica || info.dica;
   $("#how-title").textContent = ex.nome || name;
   $("#how-meta").innerHTML = `${lvlBars(+ex.nivel || info.nivel)} <span class="note">${MUSC[info.musc] || EXTRA[info.musc] || ""}${(info.sec||[]).length ? " · também " + info.sec.map(m => MUSC[m]).join(", ") : ""}</span>`;
-  $("#how-map").innerHTML = MUSC[info.musc] ? bodySVG(VIEW[info.musc], Object.assign({[info.musc]:"var(--accent)"}, ...(info.sec||[]).filter(m => VIEW[m] === VIEW[info.musc]).map(m => ({[m]:"var(--accent-soft)"}))), "Músculos trabalhados") : "";
-  if (ex.foto) $("#how-map").innerHTML = `<img src="${ex.foto}" alt="Foto de ${esc(ex.nome)}" style="width:100%;max-height:220px;object-fit:contain;border-radius:10px">` + $("#how-map").innerHTML;
-  const lp = LIBMAP.get(String(ex.nome||name).toLowerCase()), photo = lp && lp.img >= 0 && !lp.foto ? lp.img : -1, own = lp && lp.passos;
+  $("#how-fig").innerHTML = anatFull(ex);
+  $("#how-map").innerHTML = ex.foto ? `<img src="${ex.foto}" alt="Foto de ${esc(ex.nome)}" style="width:100%;max-height:220px;object-fit:contain;border-radius:10px">` : "";
+  const lp = LIBMAP.get(String(ex.nome||name).toLowerCase()), own = lp && lp.passos;
   $("#how-steps").innerHTML = (ex.custom ? [ex.dica || "Exercício criado por você."] : own ? lp.passos : steps.slice(0,3)).map(s => `<li>${esc(s)}</li>`).join("");
   $("#how-err").textContent = own ? "" : steps[3] || ""; $("#how-err").parentElement.hidden = !$("#how-err").textContent;
-  $(".how-stage").classList.toggle("photo", photo >= 0);
+  $(".how-stage").classList.toggle("photo", !ex.foto);
   $("#how-tip").hidden = !tip || !!(own && lp.passos.includes(tip)); $("#how-tip").innerHTML = `<b>Dica</b>${esc(tip||"")}`;
   $("#how").hidden = false; document.body.style.overflow = "hidden";
-  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches, per = POSES[key]?.slow ? 4200 : 2600, t0 = performance.now();
-  cancelAnimationFrame(howRAF);
-  const frame = now => {
-    const c = ((now - t0) % per) / per; let t;
-    if (reduce) t = c < .5 ? 0 : 1;
-    else t = c < .15 ? 0 : c < .5 ? (c-.15)/.35 : c < .65 ? 1 : 1 - (c-.65)/.35;
-    const e = t < .5 ? 2*t*t : 1 - Math.pow(-2*t+2, 2)/2;
-    if (photo >= 0){ const f = t < .5 ? 0 : 1, el = $("#how-fig .spr-b");
-      if (!el) $("#how-fig").innerHTML = `<span class="spr-b" role="img" aria-label="Fotos de ${esc(ex.nome||name)}" data-f="${f}" style="${sprBig(photo, f)}"></span>`;
-      else if (el.dataset.f !== String(f)){ el.dataset.f = f; el.style.cssText = sprBig(photo, f); } }
-    else $("#how-fig").innerHTML = figSVG(key, e, { label: "Animação: " + (ex.nome||name) });
-    $("#how-phase").textContent = t < .05 ? "Posição inicial" : t > .95 ? "Posição final" : "Movimento";
-    howRAF = requestAnimationFrame(frame);
-  };
-  howRAF = requestAnimationFrame(frame);
+  cancelAnimationFrame(howRAF); $("#how-phase").hidden = true;
   $("#how-close").focus();
 }
 function closeHow(){ cancelAnimationFrame(howRAF); $("#how").hidden = true; document.body.style.overflow = ""; }
@@ -488,11 +474,40 @@ const lvlBars = n => `<span class="lvl" title="Dificuldade ${n} de 5" aria-label
 const SPR = i => ({ s: Math.floor(i/100), c: i%10, r: Math.floor(i/10)%10 });
 function sprThumb(i){ const {s,c,r} = SPR(i); return `<span class="spr-t" style="background-image:url(sprites/t_${s}.jpg);background-position:${-(c*87+14.5)}px ${-(r*58)}px" aria-hidden="true"></span>`; }
 function sprBig(i, f){ const {s,c,r} = SPR(i); return `background-image:url(sprites/f${f}_${s}.jpg);background-position:${c*100/9}% ${r*100/9}%`; }
+/* ---------- desenhos de anatomia muscular (projeto wger, AGPL-3.0) ---------- */
+const ANAT = { peito:[4], costas:[12], ombros:[2], biceps:[1,13], triceps:[5], abdomen:[6,14], quadriceps:[10], posterior:[11], gluteos:[8], panturrilha:[7,15] };
+const ANAT_F = new Set([1,2,3,4,6,10,13,14]), ANAT_LOW = new Set([7,8,10,11,15]);
+function anatIds(ex){
+  const info = infoOf(ex), cats = info.cats || [], main = new Set(ANAT[info.musc] || []), sec = new Set();
+  if (cats.includes("trapezio")){                       // trapézio tem desenho próprio
+    if (cats[0] === "trapezio" && info.musc === "costas"){ main.clear(); main.add(9); } else sec.add(9);
+  }
+  for (const m of info.sec || []) for (const i of ANAT[m] || []) if (!main.has(i)) sec.add(i);
+  return { info, main, sec };
+}
+function anatBody(view, main, sec, label, cls = ""){
+  const f = view === "f", ok = i => ANAT_F.has(i) === f;
+  return `<span class="anat ${cls}" role="img" aria-label="${esc(label)}"><span class="anat-in"><img src="muscles/${f ? "front" : "back"}.png" alt="">${[...sec].filter(ok).map(i => `<img src="muscles/s${i}.svg" alt="">`).join("")}${[...main].filter(ok).map(i => `<img src="muscles/m${i}.svg" alt="">`).join("")}</span></span>`;
+}
+function anatThumb(ex){
+  const { info, main, sec } = anatIds(ex), first = [...main][0];
+  const view = first ? (ANAT_F.has(first) ? "f" : "b") : "f", low = first && ANAT_LOW.has(first);
+  return anatBody(view, main, sec, "Músculos: " + (MUSC[info.musc] || EXTRA[info.musc] || ex.nome || ""), "t " + (low ? "low" : "up"));
+}
+function anatPair(ex){
+  const { main, sec } = anatIds(ex);
+  return `<div class="anat-pair">${anatBody("f", main, sec, "Músculos trabalhados, vista de frente")}${anatBody("b", main, sec, "Músculos trabalhados, vista de costas")}</div>`;
+}
+function anatFull(ex){
+  const { main } = anatIds(ex);
+  return anatPair(ex)
+    + (main.size ? `<div class="anat-leg"><span class="k m"></span>Principal<span class="k s"></span>Ajuda</div>` : `<div class="anat-leg">Exercício para o corpo todo</div>`)
+    + `<div class="anat-cred">Ilustrações: projeto wger (AGPL-3.0)</div>`;
+}
 function thumb(info, ex){
   const lib = ex && LIBMAP.get(String(ex.nome).toLowerCase());
-  if (lib && lib.img >= 0 && !lib.foto) return `<button class="thumb fig" data-act="how" data-n="${esc(ex.nome)}" aria-label="Como fazer ${esc(ex.nome)}">${sprThumb(lib.img)}</button>`;
   if (ex && LIBMAP.get(String(ex.nome).toLowerCase())?.foto) return `<button class="thumb fig" data-act="how" data-n="${esc(ex.nome)}" aria-label="Como fazer ${esc(ex.nome)}"><img src="${LIBMAP.get(String(ex.nome).toLowerCase()).foto}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:inherit"></button>`;
-  if (ex) return `<button class="thumb fig" data-act="how" data-n="${esc(ex.nome)}" aria-label="Como fazer ${esc(ex.nome)}">${figSVG(patternOf(ex), 1, { label: ex.nome })}</button>`;
+  if (ex) return `<button class="thumb fig" data-act="how" data-n="${esc(ex.nome)}" aria-label="Como fazer ${esc(ex.nome)}">${anatThumb(ex)}</button>`;
   if (!MUSC[info.musc]) return `<div class="thumb"><span class="lbl">${esc(EXTRA[info.musc]||"")}</span></div>`;
   const f = {[info.musc]:"var(--accent)"}; (info.sec||[]).forEach(m => { if (VIEW[m] === VIEW[info.musc]) f[m] = "var(--accent-soft)"; });
   return `<div class="thumb">${bodySVG(VIEW[info.musc], f, "Trabalha " + MUSC[info.musc])}</div>`;
@@ -559,7 +574,7 @@ function renderLibrary(){
   const list = LIBRARY.map((e,i) => [e,i]).filter(([e]) => !e.hidden && (m === "todos" || catsOf(e).includes(m)) && (!mine || hasEquip(e.equip, pf.equip)) && (!q || e.nome.toLowerCase().includes(q)));
   const { pct } = recovery();
   const sig = [m, q, mine].join("|"); if (sig !== libSig){ libSig = sig; libShow = 30; }
-  $("#l-list").innerHTML = list.length ? list.slice(0, libShow).map(([e,i]) => exRow(e, pct, { lib:true, key:i })).join("") + (list.length > libShow ? `<button class="btn lib-more" id="l-more">Mostrar mais (${list.length - libShow} restantes)</button>` : "") + `<p class="note lib-credit">${list.length} exercícios. Fotos e boa parte da lista: Free Exercise DB (domínio público).</p>` : `<p class="note">Nenhum exercício encontrado. Tente outro filtro ou desmarque “Só com meu equipamento”.</p>`;
+  $("#l-list").innerHTML = list.length ? list.slice(0, libShow).map(([e,i]) => exRow(e, pct, { lib:true, key:i })).join("") + (list.length > libShow ? `<button class="btn lib-more" id="l-more">Mostrar mais (${list.length - libShow} restantes)</button>` : "") + `<p class="note lib-credit">${list.length} exercícios. Boa parte da lista e dos passos: Free Exercise DB (domínio público). Ilustrações dos músculos: projeto wger (AGPL-3.0).</p>` : `<p class="note">Nenhum exercício encontrado. Tente outro filtro ou desmarque “Só com meu equipamento”.</p>`;
   const more = $("#l-more"); if (more) more.onclick = () => { libShow += 30; renderLibrary(); };
 }
 function renderRecovery(){
@@ -972,10 +987,9 @@ function curEx(){ return wk?.list[wk.cur]; }
 function startPlayerAnim(){
   cancelAnimationFrame(plRAF); const t0 = performance.now(), reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const frame = now => { const ex = curEx(); if (!ex || $("#p-treino").hidden){ plRAF = requestAnimationFrame(frame); return; }
-    const key = patternOf(ex), per = POSES[key]?.slow ? 4200 : 2600, c = ((now - t0) % per) / per;
-    let t = reduce ? (c < .5 ? 0 : 1) : c < .15 ? 0 : c < .5 ? (c-.15)/.35 : c < .65 ? 1 : 1 - (c-.65)/.35;
-    t = t < .5 ? 2*t*t : 1 - Math.pow(-2*t+2, 2)/2;
-    $("#pl-fig").innerHTML = figSVG(key, t, { label: "Animação: " + ex.nome });
+    const el = $("#pl-fig");
+    if (el.dataset.n !== ex.nome){ el.dataset.n = ex.nome; const f = LIBMAP.get(String(ex.nome).toLowerCase())?.foto;
+      el.innerHTML = f ? `<img src="${f}" alt="Foto de ${esc(ex.nome)}" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:10px">` : anatPair(ex); }
     plRAF = requestAnimationFrame(frame); };
   plRAF = requestAnimationFrame(frame);
 }
@@ -1004,7 +1018,7 @@ function renderPlayer(){
   if (!wk) return;
   const ex = curEx();
   $("#pl-thumbs").innerHTML = wk.list.map((e,i) => { const ok = e.sets.length && e.sets.every(s => s.done);
-    return `<button class="pl-th${i===wk.cur?" on":""}${ok?" ok":""}${e.ss && i < wk.list.length-1?" ss":""}" data-i="${i}" aria-label="${esc(e.nome)}${ok?" (concluído)":""}">${figSVG(patternOf(e), 1, { label:e.nome })}${ok?`<span class="chk">✓</span>`:""}</button>`; }).join("")
+    return `<button class="pl-th${i===wk.cur?" on":""}${ok?" ok":""}${e.ss && i < wk.list.length-1?" ss":""}" data-i="${i}" aria-label="${esc(e.nome)}${ok?" (concluído)":""}">${anatThumb(e)}${ok?`<span class="chk">✓</span>`:""}</button>`; }).join("")
     + `<button class="pl-th add" id="pl-add" aria-label="Adicionar exercício">+</button>`;
   const sound = soundOn(); $("#pl-sound").setAttribute("aria-pressed", sound); $("#pl-sound-waves").style.display = sound ? "" : "none";
   const vo = voiceOn(); $("#pl-voice").setAttribute("aria-pressed", vo); $("#pl-voice-waves").style.display = vo ? "" : "none"; $("#pl-voice").hidden = !("speechSynthesis" in window);
@@ -1113,10 +1127,10 @@ $("#pl-tip").onclick = () => { const b = $("#pl-tipbox"); b.hidden = !b.hidden; 
 $("#pl-howto").onclick = () => { const ex = curEx(); if (ex) openHow(ex.nome); };
 $("#pl-edit-btn").onclick = () => { renderEdit(); openSheet("pl-edit"); };
 function renderEdit(){
-  $("#pl-edit-list").innerHTML = wk.list.map((e,i) => `<div class="exrow" style="grid-template-columns:44px minmax(0,1fr) auto"><div class="thumb fig" style="width:44px;height:44px">${figSVG(patternOf(e),1,{label:e.nome})}</div><div class="mid"><b>${esc(e.nome)}</b><span class="rx">${e.sets.filter(s=>s.done).length}/${e.sets.length} séries</span></div><div class="row" style="gap:4px;flex-wrap:nowrap"><button class="mini" data-ed="up" data-i="${i}" ${i?"":"disabled"} aria-label="Subir">↑</button><button class="mini" data-ed="down" data-i="${i}" ${i<wk.list.length-1?"":"disabled"} aria-label="Descer">↓</button><button class="mini" data-ed="del" data-i="${i}" aria-label="Remover">✕</button></div></div>${i < wk.list.length-1 ? `<button class="ss-link" data-ed="ss" data-i="${i}" aria-pressed="${!!e.ss}">${e.ss ? "🔗 Superset com o próximo (toque para desfazer)" : "+ Fazer superset com o próximo"}</button>` : ""}`).join("") || `<p class="note">Nenhum exercício. Adicione abaixo.</p>`;
+  $("#pl-edit-list").innerHTML = wk.list.map((e,i) => `<div class="exrow" style="grid-template-columns:44px minmax(0,1fr) auto"><div class="thumb fig" style="width:44px;height:44px">${anatThumb(e)}</div><div class="mid"><b>${esc(e.nome)}</b><span class="rx">${e.sets.filter(s=>s.done).length}/${e.sets.length} séries</span></div><div class="row" style="gap:4px;flex-wrap:nowrap"><button class="mini" data-ed="up" data-i="${i}" ${i?"":"disabled"} aria-label="Subir">↑</button><button class="mini" data-ed="down" data-i="${i}" ${i<wk.list.length-1?"":"disabled"} aria-label="Descer">↓</button><button class="mini" data-ed="del" data-i="${i}" aria-label="Remover">✕</button></div></div>${i < wk.list.length-1 ? `<button class="ss-link" data-ed="ss" data-i="${i}" aria-pressed="${!!e.ss}">${e.ss ? "🔗 Superset com o próximo (toque para desfazer)" : "+ Fazer superset com o próximo"}</button>` : ""}`).join("") || `<p class="note">Nenhum exercício. Adicione abaixo.</p>`;
   const q = $("#pl-q").value.trim().toLowerCase(), pf = normProfile(state.profile), have = new Set(wk.list.map(e => e.nome));
   const res = libVis().filter(e => !have.has(e.nome) && hasEquip(e.equip, pf.equip) && (!q || e.nome.toLowerCase().includes(q) || [MUSC[e.musc]||EXTRA[e.musc]||"", ...catsOf(e).map(c => CATS[c]||"")].join(" ").toLowerCase().includes(q))).slice(0, q ? 20 : 8);
-  $("#pl-add-list").innerHTML = res.map(e => `<div class="exrow" style="grid-template-columns:44px minmax(0,1fr) auto"><div class="thumb fig" style="width:44px;height:44px">${figSVG(patternOf(e),1,{label:e.nome})}</div><div class="mid"><b>${esc(e.nome)}</b><span class="rx">${MUSC[e.musc]||EXTRA[e.musc]}</span></div><button class="btn sm" data-addex="${esc(e.nome)}">Adicionar</button></div>`).join("") || `<p class="note">Nada encontrado.</p>`;
+  $("#pl-add-list").innerHTML = res.map(e => `<div class="exrow" style="grid-template-columns:44px minmax(0,1fr) auto"><div class="thumb fig" style="width:44px;height:44px">${anatThumb(e)}</div><div class="mid"><b>${esc(e.nome)}</b><span class="rx">${MUSC[e.musc]||EXTRA[e.musc]}</span></div><button class="btn sm" data-addex="${esc(e.nome)}">Adicionar</button></div>`).join("") || `<p class="note">Nada encontrado.</p>`;
 }
 $("#pl-q").oninput = renderEdit;
 $("#pl-edit-list").onclick = e => { const b = e.target.closest("[data-ed]"); if (!b) return; const i = +b.dataset.i, L = wk.list, curName = L[wk.cur]?.nome;
@@ -1688,7 +1702,7 @@ function busyAlts(ex){
   return libVis().filter(e => e.musc === info.musc && e.nome !== ex.nome && !have.has(e.nome) && hasEquip(e.equip, pf.equip))
     .sort((a,b) => ((a.equip === info.equip) - (b.equip === info.equip)) || Math.abs(a.nivel - info.nivel) - Math.abs(b.nivel - info.nivel)).slice(0, 8);
 }
-const altRow = (e, why) => `<div class="exrow" style="grid-template-columns:44px minmax(0,1fr) auto"><div class="thumb fig" style="width:44px;height:44px">${figSVG(patternOf(e),1,{label:e.nome})}</div><div class="mid"><b>${esc(e.nome)}</b><span class="rx">${why ? esc(why) : esc(EQUIP[e.equip] || "Peso do corpo")}</span></div><button class="btn sm" data-swap="${esc(e.nome)}">Trocar</button></div>`;
+const altRow = (e, why) => `<div class="exrow" style="grid-template-columns:44px minmax(0,1fr) auto"><div class="thumb fig" style="width:44px;height:44px">${anatThumb(e)}</div><div class="mid"><b>${esc(e.nome)}</b><span class="rx">${why ? esc(why) : esc(EQUIP[e.equip] || "Peso do corpo")}</span></div><button class="btn sm" data-swap="${esc(e.nome)}">Trocar</button></div>`;
 function openBusy(){
   const ex = curEx(); if (!ex) return;
   $("#pl-busy-sub").textContent = `Troque ${ex.nome} por outro exercício do mesmo músculo só no treino de hoje. Séries já feitas ficam registradas.`;
@@ -2217,7 +2231,7 @@ let cxFoto = "";
 function renderCustom(){
   if (!$("#cx-card")) return;
   if (!$("#cx-musc").options.length){ $("#cx-musc").innerHTML = [...Object.entries(MUSC), ...Object.entries(EXTRA)].map(([k,t]) => `<option value="${k}">${t}</option>`).join(""); $("#cx-equip").innerHTML = [["corpo","Peso do corpo"], ...Object.entries(EQUIP)].map(([k,t]) => `<option value="${k}">${t}</option>`).join(""); }
-  $("#cx-list").innerHTML = CUSTOM.length ? CUSTOM.map(c => `<div class="exrow" style="grid-template-columns:52px minmax(0,1fr) auto">${c.foto ? `<img class="cx-img" src="${c.foto}" alt="Foto de ${esc(c.nome)}">` : `<div class="thumb fig" style="width:52px;height:52px">${figSVG(patternOf({ nome:c.nome, musculo:c.musc }), 1, { label:c.nome })}</div>`}<div class="mid"><b>${esc(c.nome)}</b><span class="rx">${MUSC[c.musc] || EXTRA[c.musc] || ""} · ${esc(EQUIP[c.equip] || "Peso do corpo")}</span></div><button class="mini" data-cx-del="${esc(c.nome)}">Apagar</button></div>`).join("")
+  $("#cx-list").innerHTML = CUSTOM.length ? CUSTOM.map(c => `<div class="exrow" style="grid-template-columns:52px minmax(0,1fr) auto">${c.foto ? `<img class="cx-img" src="${c.foto}" alt="Foto de ${esc(c.nome)}">` : `<div class="thumb fig" style="width:52px;height:52px">${anatThumb({ nome:c.nome, musculo:c.musc })}</div>`}<div class="mid"><b>${esc(c.nome)}</b><span class="rx">${MUSC[c.musc] || EXTRA[c.musc] || ""} · ${esc(EQUIP[c.equip] || "Peso do corpo")}</span></div><button class="mini" data-cx-del="${esc(c.nome)}">Apagar</button></div>`).join("")
     : `<p class="note">Crie exercícios que não estão na biblioteca, como um aparelho específico da sua academia. Eles aparecem na busca e podem entrar nos seus treinos.</p>`;
 }
 function resizeImg(file, max = 360){ return new Promise((ok, no) => { const img = new Image(), url = URL.createObjectURL(file); img.onload = () => { const k = Math.min(1, max / Math.max(img.width, img.height)), c = document.createElement("canvas"); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext("2d").drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url); ok(c.toDataURL("image/jpeg", .78)); }; img.onerror = no; img.src = url; }); }

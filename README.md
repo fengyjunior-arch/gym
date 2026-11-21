@@ -12,3 +12,8 @@ App de treino com Liga, desafios, feed e clube, instalável no celular (PWA).
 1. Preencha `public/config.js` com a Project URL e a anon key do Supabase (dá para editar direto no GitHub, no ícone de lápis).
 2. Na Netlify: **Add new site > Import an existing project > GitHub** e escolha este repositório. O `netlify.toml` já diz para publicar a pasta `public`.
 3. Cada mudança enviada para o repositório atualiza o site sozinha.
+
+## Créditos
+
+- Ilustrações dos músculos: projeto [wger](https://github.com/wger-project/wger) (AGPL-3.0).
+- Lista e passos de boa parte dos exercícios: [Free Exercise DB](https://github.com/yuhonas/free-exercise-db) (domínio público).

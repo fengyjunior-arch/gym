@@ -1,0 +1,4 @@
+Ilustrações de anatomia muscular: projeto wger Workout Manager
+https://github.com/wger-project/wger (pasta wger/core/static/images/muscles)
+Licença: AGPL-3.0 ou posterior (https://www.gnu.org/licenses/agpl-3.0.html).
+O código do Ironmind fica aberto neste repositório: https://gitlab.com/FengyJunior/gym

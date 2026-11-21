@@ -1,6 +1,6 @@
 // Service worker do Ironmind: guarda o app no aparelho para abrir rápido e sem internet.
-const CACHE = "ironmind-0baedd93";
-const SHELL = ["./", "index.html", "styles.css?v=0baedd93", "app.js?v=0baedd93", "shim.js?v=0baedd93", "config.js?v=0baedd93",
+const CACHE = "ironmind-wger0001";
+const SHELL = ["./", "index.html", "styles.css?v=wger0001", "app.js?v=wger0001", "shim.js?v=wger0001", "config.js?v=wger0001",
   "lib/supabase.js", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png", "icons/favicon-64.png"];
 
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
